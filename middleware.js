@@ -1,22 +1,20 @@
 import { NextResponse } from "next/server";
 
 export function middleware(request) {
-  console.log("running");
-  const user = false;
+  const user = request.cookies.get("accessToken") ? true : false;
+  console.log(user);
+  const url = new URL(request.url);
+  if (user && (url.pathname === "/" || url.pathname === "")) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
 
-  if (!user) {
+  if (!user && url.pathname === "/dashboard") {
     return NextResponse.redirect(new URL("/", request.url));
-  } else {
-    const url = new URL(request.url);
-
-    if (url.pathname === "/" || url.pathname === "") {
-      return NextResponse.rewrite(new URL("/dashboard", request.url));
-    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/", "/dashboard"],
+  matcher: ["/", "/dashboard", "/user/blueprint"],
 };

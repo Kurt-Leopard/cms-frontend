@@ -1,22 +1,17 @@
-import axios from "axios";
-export default async function Page() {
-  const res = await axios.get(
-    "https://mcmc-backend-1.onrender.com/api/leaders"
-  );
-  const posts = await res.data;
+import BlueprintForm from "../components/BlueprintForm";
+import Sidebar from "../components/SideBar";
 
+const BlueprintPage = () => {
   return (
-    <div>
-      <h1>Posts</h1>
-      <div>
-        {posts?.result.map((item, index) => {
-          return (
-            <div key={index}>
-              <h2>{item.fullname}</h2>
-            </div>
-          );
-        })}
+    <div className="flex h-[100vh]">
+      <div className="sticky top-0 h-full w-[300px] bg-gray-800">
+        <Sidebar />
+      </div>
+      <div className="flex-1 overflow-auto">
+        <BlueprintForm />
       </div>
     </div>
   );
-}
+};
+
+export default BlueprintPage;
