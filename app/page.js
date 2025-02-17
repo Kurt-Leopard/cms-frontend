@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import axios from "../axios";
+import Image from "next/image";
 export default function Page() {
   const [formData, setFormData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -14,36 +15,45 @@ export default function Page() {
   };
 
   const handleSubmit = async (event) => {
+    setLoading(true);
     event.preventDefault();
     try {
       const response = await axios.post("/api/login", formData);
-      console.log(response);
+
       if (response.status === 200) {
         sessionStorage.setItem("token", response.data.token);
-        alert(response.data.message);
+        setLoading(false);
         window.location.href = "/dashboard";
       }
     } catch (error) {
       if (error.response) setError(error?.response?.data?.message);
-
+      setLoading(false);
       console.log(error.response);
     }
   };
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col justify-center sm:py-12">
-      <div className="p-10 xs:p-0 mx-auto md:w-full md:max-w-md">
-        <h1 className="font-bold text-center text-2xl mb-5">CMS</h1>
+      <div className="p-10 xs:p-0 mx-auto md:w-full md:max-w-lg">
         <form
           className="bg-white shadow w-full rounded-lg divide-y divide-gray-200"
           onSubmit={handleSubmit}
         >
           <div className="px-5 py-7">
+            <div className="flex items-center justify-center">
+              <Image
+                src="/mj.png"
+                width={100}
+                height={100}
+                alt="logo"
+                className="rounded-full"
+              />
+            </div>
             <label className="font-semibold text-sm text-gray-600 pb-1 block">
               E-mail
             </label>
             <input
               type="email"
-              className={`border rounded-lg px-3 py-2 mt-1 text-sm w-full ${
+              className={`border rounded-lg px-3 py-4 mt-1 text-sm w-full ${
                 error ? "" : "mb-5"
               }`}
               placeholder="Enter your email"
@@ -56,30 +66,18 @@ export default function Page() {
             </label>
             <input
               type="password"
-              className="border rounded-lg px-3 py-2 mt-1 mb-5 text-sm w-full"
+              className="border rounded-lg px-3 py-4 mt-1 mb-5 text-sm w-full"
               placeholder="Enter your password"
               name="password"
               onChange={handleChange}
             />
             <button
               type="submit"
-              className="transition duration-200 bg-blue-500 hover:bg-blue-600 focus:bg-blue-700 focus:shadow-sm focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 text-white w-full py-2.5 rounded-lg text-sm shadow-sm hover:shadow-md font-semibold text-center inline-block"
+              className="transition duration-200 bg-primary hover:bg-blue-600 focus:bg-blue-600 focus:shadow-sm focus:ring-4 focus:ring-blue-600 focus:ring-opacity-50 text-white w-full py-4 rounded-lg text-sm shadow-sm hover:shadow-md font-semibold text-center inline-block"
             >
-              <span className="inline-block mr-2">Login</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                className="w-4 h-4 inline-block"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M17 8l4 4m0 0l-4 4m4-4H3"
-                />
-              </svg>
+              <span className="inline-block mr-2">
+                {loading ? <>Logging in...</> : <> Login</>}
+              </span>
             </button>
           </div>
 
