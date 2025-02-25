@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import axios from "../../axios";
 import { token } from "../helper/utils";
+
 const BlueprintForm = ({ setShow }) => {
   const [blueprintName, setBlueprintName] = useState("");
   const [parentFields, setParentFields] = useState([
@@ -53,8 +54,9 @@ const BlueprintForm = ({ setShow }) => {
     updatedFields[parentIndex].nestedFields[fieldIndex][name] = value;
 
     if (name === "type" && value === "repeater") {
+      // Initialize nestedRepeaters for a repeater field
       updatedFields[parentIndex].nestedFields[fieldIndex].nestedRepeaters = [
-        { title: "", stateName: "", type: "text" },
+        { title: "", stateName: "", type: "text", nestedRepeaters: [] },
       ];
     }
 
@@ -73,11 +75,12 @@ const BlueprintForm = ({ setShow }) => {
       repeaterFieldIndex
     ][name] = value;
 
-    // If another repeater is added, create a new nested repeater field inside it
     if (name === "type" && value === "repeater") {
       updatedFields[parentIndex].nestedFields[fieldIndex].nestedRepeaters[
         repeaterFieldIndex
-      ].nestedRepeaters = [{ title: "", stateName: "", type: "text" }];
+      ].nestedRepeaters = [
+        { title: "", stateName: "", type: "text", nestedRepeaters: [] },
+      ];
     }
 
     setParentFields(updatedFields);
@@ -86,6 +89,18 @@ const BlueprintForm = ({ setShow }) => {
   const addNestedField = (parentIndex) => {
     const updatedFields = [...parentFields];
     updatedFields[parentIndex].nestedFields.push({
+      title: "",
+      stateName: "",
+      type: "text",
+      nestedRepeaters: [],
+    });
+    setParentFields(updatedFields);
+  };
+
+  // New function to add fields within a repeater
+  const addRepeaterField = (parentIndex, fieldIndex) => {
+    const updatedFields = [...parentFields];
+    updatedFields[parentIndex].nestedFields[fieldIndex].nestedRepeaters.push({
       title: "",
       stateName: "",
       type: "text",
@@ -115,7 +130,7 @@ const BlueprintForm = ({ setShow }) => {
         blueprintName,
         parentFields,
       };
-
+      console.log("first", data);
       const response = await axios.post("/api/blueprint", {
         user_id: token.id,
         name: blueprintName,
@@ -132,10 +147,10 @@ const BlueprintForm = ({ setShow }) => {
   };
 
   return (
-    <div>
+    <div className="px-4">
       <form
         onSubmit={handleSubmit}
-        className="border bg-gray-50 p-6 mt-4 rounded-md shadow-md w-full "
+        className="border bg-gray-50 p-6 mt-4 rounded-md shadow-md w-full"
       >
         <div className="mb-4 text-sm font-medium">
           <label className="block text-gray-700 font-medium mb-2">Name</label>
@@ -149,19 +164,14 @@ const BlueprintForm = ({ setShow }) => {
           />
         </div>
         <div className="bg-white border p-4 rounded-lg text-sm font-medium">
-          {/* Blueprint Name Input */}
-
-          {/* Parent Fields */}
           {parentFields.map((parent, parentIndex) => (
             <div
               key={parentIndex}
               className="border bg-gray-50 p-4 rounded-lg my-2"
             >
               <h3 className="font-semibold text-gray-800 mb-4">Sections</h3>
-              {/* Parent Title and State Name */}
-
               <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-2 text-sm ">
+                <label className="block text-gray-700 font-medium mb-2 text-sm">
                   Title
                 </label>
                 <input
@@ -175,7 +185,7 @@ const BlueprintForm = ({ setShow }) => {
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-2 text-sm ">
+                <label className="block text-gray-700 font-medium mb-2 text-sm">
                   State name
                 </label>
                 <input
@@ -189,11 +199,9 @@ const BlueprintForm = ({ setShow }) => {
                 />
               </div>
               <div className="mb-6 p-4 bg-white border rounded-md shadow-sm">
-                <h3 className="font-semibold text-gray-800 mb-4 text-sm ">
+                <h3 className="font-semibold text-gray-800 mb-4 text-sm">
                   Fields
                 </h3>
-
-                {/* Nested Fields */}
                 {parent.nestedFields.map((field, fieldIndex) => (
                   <div
                     key={fieldIndex}
@@ -249,92 +257,101 @@ const BlueprintForm = ({ setShow }) => {
                       </select>
                     </div>
 
-                    {/* Repeater Nested Field */}
-                    {field.type === "repeater" &&
-                      field.nestedRepeaters.length > 0 && (
-                        <div className="mt-4 p-4 bg-gray-100 border rounded-md">
-                          {field.nestedRepeaters.map(
-                            (nestedField, repeaterFieldIndex) => (
-                              <div key={repeaterFieldIndex} className="mb-4">
-                                <div className="mb-4">
-                                  <label className="block text-gray-700 mb-2">
-                                    Title
-                                  </label>
-                                  <input
-                                    type="text"
-                                    name="title"
-                                    value={nestedField.title}
-                                    onChange={(e) =>
-                                      handleRepeaterNestedFieldChange(
-                                        parentIndex,
-                                        fieldIndex,
-                                        repeaterFieldIndex,
-                                        e
-                                      )
-                                    }
-                                    placeholder="Enter title"
-                                    required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900"
-                                  />
-                                </div>
-                                <div className="mb-4">
-                                  <label className="block text-gray-700 mb-2">
-                                    State Name
-                                  </label>
-                                  <input
-                                    type="text"
-                                    name="stateName"
-                                    value={nestedField.stateName}
-                                    onChange={(e) =>
-                                      handleRepeaterNestedFieldChange(
-                                        parentIndex,
-                                        fieldIndex,
-                                        repeaterFieldIndex,
-                                        e
-                                      )
-                                    }
-                                    placeholder="Enter state name"
-                                    required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900"
-                                  />
-                                </div>
-                                <div className="mb-4">
-                                  <label className="block text-gray-700 mb-2">
-                                    Input Type
-                                  </label>
-                                  <select
-                                    name="type"
-                                    value={nestedField.type}
-                                    onChange={(e) =>
-                                      handleRepeaterNestedFieldChange(
-                                        parentIndex,
-                                        fieldIndex,
-                                        repeaterFieldIndex,
-                                        e
-                                      )
-                                    }
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900"
-                                  >
-                                    {inputTypes.map((type) => (
-                                      <option key={type} value={type}>
-                                        {type}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
+                    {/* Render repeater nested fields only if type is "repeater" */}
+                    {field.type === "repeater" && (
+                      <div className="mt-4 p-4 bg-gray-100 border rounded-md">
+                        {field.nestedRepeaters.map(
+                          (nestedField, repeaterFieldIndex) => (
+                            <div key={repeaterFieldIndex} className="mb-4">
+                              <div className="mb-4">
+                                <label className="block text-gray-700 mb-2">
+                                  Title
+                                </label>
+                                <input
+                                  type="text"
+                                  name="title"
+                                  value={nestedField.title}
+                                  onChange={(e) =>
+                                    handleRepeaterNestedFieldChange(
+                                      parentIndex,
+                                      fieldIndex,
+                                      repeaterFieldIndex,
+                                      e
+                                    )
+                                  }
+                                  placeholder="Enter title"
+                                  required
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900"
+                                />
                               </div>
-                            )
-                          )}
+                              <div className="mb-4">
+                                <label className="block text-gray-700 mb-2">
+                                  State Name
+                                </label>
+                                <input
+                                  type="text"
+                                  name="stateName"
+                                  value={nestedField.stateName}
+                                  onChange={(e) =>
+                                    handleRepeaterNestedFieldChange(
+                                      parentIndex,
+                                      fieldIndex,
+                                      repeaterFieldIndex,
+                                      e
+                                    )
+                                  }
+                                  placeholder="Enter state name"
+                                  required
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900"
+                                />
+                              </div>
+                              <div className="mb-4">
+                                <label className="block text-gray-700 mb-2">
+                                  Input Type
+                                </label>
+                                <select
+                                  name="type"
+                                  value={nestedField.type}
+                                  onChange={(e) =>
+                                    handleRepeaterNestedFieldChange(
+                                      parentIndex,
+                                      fieldIndex,
+                                      repeaterFieldIndex,
+                                      e
+                                    )
+                                  }
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900"
+                                >
+                                  {inputTypes.map((type) => (
+                                    <option key={type} value={type}>
+                                      {type}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          )
+                        )}
+                        <div className="flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              addRepeaterField(parentIndex, fieldIndex)
+                            }
+                            className="border text-sm font-medium border-gray-900 text-gray-900 hover:text-white px-4 py-2 rounded-md hover:bg-gray-900 transition"
+                          >
+                            Add repeater field
+                          </button>
                         </div>
-                      )}
+                      </div>
+                    )}
                   </div>
                 ))}
-
                 <div className="flex items-center justify-center">
                   <button
                     type="button"
                     onClick={() => addNestedField(parentIndex)}
-                    className=" border text-sm font-medium border-gray-900  hover:text-white  text-gray-900 px-4 py-2 rounded-md hover:bg-gray-900 transition"
+                    className="border text-sm font-medium border-gray-900 hover:text-white text-gray-900 px-4 py-2 rounded-md hover:bg-gray-900 transition"
                   >
                     Add fields
                   </button>
@@ -342,7 +359,6 @@ const BlueprintForm = ({ setShow }) => {
               </div>
             </div>
           ))}
-
           <div className="flex items-center justify-center">
             <button
               type="button"

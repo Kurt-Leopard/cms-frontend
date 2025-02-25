@@ -40,14 +40,16 @@ const SideBar = () => {
         <span className="ml-2 text-sm font-bold">QuickPage</span>
       </Link>
 
-      <div className="w-full px-2">
+      <div className="w-full flex flex-col justify-between h-full px-2">
         <div className="flex flex-col items-center w-full mt-3 border-t border-gray-700">
           {menuItems.map((item, index) => (
             <Link
               key={index}
               href={item.href}
               className={`flex items-center w-full h-12 px-3 mt-2 rounded ${
-                pathname === item.href ? "text-gray-200 bg-gray-700" : ""
+                pathname.startsWith(item.href)
+                  ? "text-gray-200 bg-gray-700"
+                  : ""
               }`}
             >
               {item.icon}
@@ -57,7 +59,7 @@ const SideBar = () => {
         </div>
 
         <Link
-          className="flex items-center justify-center w-full h-16 mt-auto bg-gray-800 hover:bg-gray-700 hover:text-gray-300"
+          className="flex items-center justify-center w-full h-16 mt-auto bg-gray-800 rounded-lg my-4 hover:bg-gray-700 hover:text-gray-300"
           href="#"
         >
           <span className="text-sm font-medium">Logout</span>

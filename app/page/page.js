@@ -1,31 +1,40 @@
 "use client";
-import SiteForm from "../components/siteForm";
+import PageForm from "../components/PageForm";
 import Sidebar from "../components/SideBar";
 import Header from "../components/Header";
+// import DynamicForm from "../form/Fields";
 import { useState, useEffect } from "react";
 import axios from "../../axios";
 import { token, formatDate } from "../helper/utils";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
 const Page = () => {
   const [showForm, setShowForm] = useState(false);
-  const [siteData, setSiteData] = useState(null);
-
+  const [pageData, setpageData] = useState(null);
+  const router = useRouter();
   const toggleForm = () => {
     setShowForm(!showForm);
   };
 
+  const dynamiRoute = (id) => {
+    if (id) {
+      router.push(`/page/${id}`);
+    }
+  };
   useEffect(() => {
-    const fetchSiteData = async () => {
+    const fetchpageData = async () => {
       try {
-        const response = await axios.get(`/api/site/${token.id}`);
-        setSiteData(response.data);
+        const response = await axios.get(`/api/page/${token.id}`);
+        setpageData(response.data);
+        console.log("first", pageData);
       } catch (err) {
         setError("An error occurred while fetching site data.");
         console.error(err);
       }
     };
 
-    fetchSiteData();
+    fetchpageData();
   }, []);
   return (
     <div className="flex h-[100vh]">
@@ -39,12 +48,12 @@ const Page = () => {
             onClick={toggleForm}
             className="bg-gray-900 text-sm font-medium text-gray-200 px-4 py-2 rounded-md hover:bg-gray-900 transition"
           >
-            Create Site
+            Create Page
           </button>
         </div>
         {showForm ? (
           <>
-            <SiteForm setShow={toggleForm} />
+            <PageForm setShow={toggleForm} />
           </>
         ) : (
           <>
@@ -63,7 +72,7 @@ const Page = () => {
                         scope="col"
                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                       >
-                        Domain
+                        Url
                       </th>
                       <th
                         scope="col"
@@ -81,7 +90,7 @@ const Page = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {siteData?.result.length === 0 ? (
+                    {pageData?.result.length === 0 ? (
                       <tr>
                         <td
                           colSpan="6"
@@ -91,22 +100,31 @@ const Page = () => {
                         </td>
                       </tr>
                     ) : (
-                      siteData?.result.map((item) => (
+                      pageData?.result.map((item) => (
                         <tr key={item.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td
+                            className="px-6 py-4 whitespace-nowrap"
+                            onClick={() => dynamiRoute(item.id)}
+                          >
                             <div className="text-sm text-gray-900">
                               {item.name}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td
+                            className="px-6 py-4 whitespace-nowrap"
+                            onClick={() => dynamiRoute(item.id)}
+                          >
                             <Link
-                              href={item.domain}
+                              href={item.url}
                               className="text-sm text-blue-500"
                             >
-                              {item.domain}
+                              {item.url}
                             </Link>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td
+                            className="px-6 py-4 whitespace-nowrap"
+                            onClick={() => dynamiRoute(item.id)}
+                          >
                             <div className="text-sm text-gray-500">
                               {formatDate(item.created_at)}
                             </div>
