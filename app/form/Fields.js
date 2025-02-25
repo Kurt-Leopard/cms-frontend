@@ -22,7 +22,7 @@ export default function DynamicForm({
     if (formConfig) {
       updateFormData(formId, formData);
     }
-  }, [formData, formConfig, formId, updateFormData]);
+  }, [formData, formConfig]);
 
   const handleChange = (name, value) => {
     setFormData((prev) => ({
@@ -72,19 +72,40 @@ export default function DynamicForm({
   };
 
   const handleRemoveRepeater = (name, index) => {
+    alert(`${name}_image_${index}`);
+
     setFormData((prev) => {
-      const updatedData = [...(prev[name] || [])];
-      updatedData.splice(index, 1);
+      if (!prev[name]) return prev;
+
+      // Remove the specific item from the array
+      const updatedData = prev[name].filter((_, i) => i !== index);
+
+      // Create a new object excluding the removed image field
       const updatedFormData = { ...prev, [name]: updatedData };
-      delete updatedFormData[`${name}_image_${index}`];
+
+      // Remove the related image entry if it exists
+      const imageKey = `${name}_image_${index}`;
+      if (updatedFormData[imageKey]) {
+        delete updatedFormData[imageKey];
+      }
+
+      console.log("Updated FormData:", updatedFormData);
       return updatedFormData;
     });
+    // setFormData((prev) => {
+    //   const updatedData = [...(prev[name] || [])];
+    //   updatedData.splice(index, 1);
+    //   const updatedFormData = { ...prev, [name]: updatedData };
+    //   delete updatedFormData[`${name}_image_${index}`];
+    //   console.log(updatedData);
+    //   return updatedFormData;
+    // });
 
-    setImagePreview((prev) => {
-      const updatedPreview = { ...prev };
-      delete updatedPreview[`${name}_image_f${index}`];
-      return updatedPreview;
-    });
+    // setImagePreview((prev) => {
+    //   const updatedPreview = { ...prev };
+    //   delete updatedPreview[`${name}_image_f${index}`];
+    //   return updatedPreview;
+    // });
   };
 
   const handleCollapse = (repeaterName, index) => {
@@ -106,6 +127,7 @@ export default function DynamicForm({
               <div
                 key={nestedData.id}
                 className="mb-4 border p-4 rounded-lg bg-white"
+                id={`remove-${nestedIndex}`}
               >
                 <div className="flex justify-between items-center mb-2 pb-3 border-b">
                   <div className="flex items-center justify-between w-full">
@@ -169,7 +191,11 @@ export default function DynamicForm({
                       }`}
                     >
                       <label className="block text-xs font-medium text-gray-700 mb-1">
-                        {nested.title}:
+                        {nested.title}: {nestedIndex}{" "}
+                        {console.log(
+                          "Object.keys(imagePreview).length",
+                          Object.keys(imagePreview)[nestedIndex] ? "true" : ""
+                        )}
                       </label>
                       {nested.type === "file" ? (
                         <>
@@ -209,33 +235,34 @@ export default function DynamicForm({
                                 <span className="font-medium text-gray-600">
                                   Drop Image to Attach, or
                                   <span className="text-blue-600 underline ml-[4px]">
-                                    browse{Object.keys(imagePreview).length}
+                                    browse
                                   </span>
                                 </span>
                               </span>
                             </label>
                           </div>
-                          {Object.keys(imagePreview).length > 0 && (
-                            <>
+                          {imagePreview[
+                            `${nestedUniqueStateName}_image_${nestedIndex}`
+                          ] &&
+                            imagePreview[
+                              `${nestedUniqueStateName}_image_${nestedIndex}`
+                            ].length > 0 && (
                               <div className="flex flex-wrap items-center justify-center gap-[12px] p-6 bg-gray-200 rounded-lg my-5">
                                 {imagePreview[
                                   `${nestedUniqueStateName}_image_${nestedIndex}`
-                                ] &&
-                                  imagePreview[
-                                    `${nestedUniqueStateName}_image_${nestedIndex}`
-                                  ].map((src, idx) => (
-                                    <Image
-                                      key={idx}
-                                      src={src}
-                                      width={300}
-                                      height={300}
-                                      alt={`Preview ${idx + 1}`}
-                                      className="mt-2 w-[300px] h-[300px]  object-cover rounded-md"
-                                    />
-                                  ))}
+                                ].map((src, idx) => (
+                                  <Image
+                                    key={idx}
+                                    src={src}
+                                    width={300}
+                                    height={300}
+                                    alt={`Preview ${idx + 1}`}
+                                    className="mt-2 w-[300px] h-[300px] object-cover rounded-md"
+                                    property="true"
+                                  />
+                                ))}
                               </div>
-                            </>
-                          )}
+                            )}
                         </>
                       ) : nested.type === "select" ? (
                         <select
@@ -402,17 +429,21 @@ export default function DynamicForm({
                     )}
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center justify-center py-6 bg-gray-200 rounded-lg">
-                  {imagePreview[uniqueStateName] &&
-                    imagePreview[uniqueStateName].map((src, idx) => (
-                      <Image
-                        key={idx}
-                        src={src}
-                        alt={`Preview ${idx + 1}`}
-                        className="mt-2 w-32 h-32 mx-2 object-cover rounded-md"
-                      />
-                    ))}
-                </div>
+                {imagePreview[uniqueStateName] &&
+                  imagePreview[uniqueStateName].length > 0 && (
+                    <div className="flex flex-wrap items-center justify-center py-6 bg-gray-200 rounded-lg">
+                      {imagePreview[uniqueStateName].map((src, idx) => (
+                        <Image
+                          key={idx}
+                          src={src}
+                          width={300}
+                          height={300}
+                          alt={`Preview ${idx + 1}`}
+                          className="mt-2 w-32 h-32 mx-2 object-cover rounded-md"
+                        />
+                      ))}
+                    </div>
+                  )}
               </div>
             )}
           </div>

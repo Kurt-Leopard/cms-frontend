@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "../../axios";
 import { token, formatDate } from "../helper/utils";
 import { useRouter } from "next/navigation";
-
+import Image from "next/image";
 const DynamicBlockForm = ({ setShow, site, pageid }) => {
   const [blockData, setBlockData] = useState(null);
   const [error, setError] = useState(null);
@@ -25,7 +25,7 @@ const DynamicBlockForm = ({ setShow, site, pageid }) => {
     existingData.push(newData);
 
     sessionStorage.setItem("data", JSON.stringify(existingData));
-
+    window.dispatchEvent(new Event("sessionDataUpdated"));
     router.push(`/page/${page}`);
 
     setShow(false);
@@ -98,9 +98,11 @@ const DynamicBlockForm = ({ setShow, site, pageid }) => {
                 <div className="rounded overflow-hidden shadow-lg flex flex-col h-full">
                   <a href="#">
                     <div className="relative flex-1">
-                      <img
+                      <Image
                         src={`https://storage.googleapis.com/mcm-chuch.appspot.com/${item.image}`}
                         alt="Sunset in the mountains"
+                        width={100}
+                        height={100}
                         className="w-[400px] h-[260px] object-cover"
                       />
                       <div className="hover:bg-transparent transition duration-300 absolute bottom-0 top-0 right-0 left-0 bg-gray-900 opacity-25"></div>

@@ -35,7 +35,7 @@ const Page = () => {
     };
 
     fetchpageData();
-  }, []);
+  });
   return (
     <div className="flex h-[100vh]">
       <div className="sticky top-0 h-full w-[300px] bg-gray-800">

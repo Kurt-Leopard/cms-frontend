@@ -16,7 +16,33 @@ const Page = ({ params }) => {
   const [blueprintDatas, setBlueprintData] = useState(null);
   const [parsedData, setParsedData] = useState(null);
   const [allFormData, setAllFormData] = useState({});
-  const data = JSON.parse(sessionStorage.getItem("data"));
+  const [data, setData] = useState(null); // ⬅️ Use state for session data
+  const [forceUpdate, setForceUpdate] = useState(false); // ⬅️ Force re-render
+
+  // Function to get session storage data
+  const getSessionData = () => {
+    const storedData = sessionStorage.getItem("data");
+    return storedData ? JSON.parse(storedData) : null;
+  };
+
+  useEffect(() => {
+    // Initial data load
+    setData(getSessionData());
+
+    // Function to update state when sessionStorage changes
+    const handleStorageUpdate = () => {
+      console.log("Session storage updated, updating state...");
+      setData(getSessionData());
+      setForceUpdate((prev) => !prev); // Force re-render
+    };
+
+    // Listen for custom event
+    window.addEventListener("sessionDataUpdated", handleStorageUpdate);
+
+    return () => {
+      window.removeEventListener("sessionDataUpdated", handleStorageUpdate);
+    };
+  }, []);
 
   const addBlock = () => {
     setShow(true);
@@ -46,11 +72,11 @@ const Page = ({ params }) => {
 
   useEffect(() => {
     if (data) {
-      const blueprintData = data.map((data) => ({
-        blueprint_id: data.blueprint_id,
+      const blueprintData = data.map((item) => ({
+        blueprint_id: item.blueprint_id,
       }));
 
-      if (blueprintData) {
+      if (blueprintData.length > 0) {
         const fetchBlueprintData = async () => {
           try {
             const response = await axios.post(`/api/blueprint/${token.id}`, {
@@ -66,39 +92,42 @@ const Page = ({ params }) => {
         fetchBlueprintData();
       }
     }
-  }, []);
+  }, [data, forceUpdate]); // 🔥 Depend on `data` and `forceUpdate`
 
   useEffect(() => {
     if (blueprintDatas?.result?.length > 0) {
       const parsedDataArray = [];
       blueprintDatas.result.forEach((item) => {
-        const data = item.data;
-        if (data && typeof data === "string") {
+        const itemData = item.data;
+        if (itemData && typeof itemData === "string") {
           try {
-            const parsedItem = JSON.parse(data);
+            const parsedItem = JSON.parse(itemData);
             parsedDataArray.push(parsedItem);
           } catch (error) {
             console.error("Error parsing data for blueprint:", item.id, error);
           }
         } else {
-          console.log("Invalid data for blueprint:", item.id, data);
+          console.log("Invalid data for blueprint:", item.id, itemData);
         }
       });
       setParsedData(parsedDataArray);
     }
   }, [blueprintDatas]);
 
-  const updateFormData = (formId, data) => {
-    setAllFormData((prev) => ({
-      ...prev,
-      [formId]: data,
-    }));
+  const updateFormData = (formId, formData) => {
+    setAllFormData((prev) => {
+      if (JSON.stringify(prev[formId]) === JSON.stringify(formData)) {
+        return prev; // No change, return previous state
+      }
+      return {
+        ...prev,
+        [formId]: formData,
+      };
+    });
   };
 
-  // Handle form submission
   const handleSubmitAllForms = () => {
     console.log("All form data:", allFormData);
-
     alert("All forms submitted successfully!");
   };
 
@@ -120,23 +149,7 @@ const Page = ({ params }) => {
         )}
 
         <PageForm datas={pageData} />
-        {/* {parsedData && parsedData.length > 0 && (
-          <>
-            {parsedData.map((data, index) => (
-              {
-                data &&(
-  <DynamicForm
-                key={index}
-                datas={data}
-                formId={`form_${index}`}
-                updateFormData={updateFormData}
-              />
-                )
-              }
-            
-            ))}
-          </>
-        )} */}
+
         {parsedData && parsedData.length > 0 && (
           <>
             {parsedData.map(
