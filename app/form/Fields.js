@@ -22,7 +22,7 @@ export default function DynamicForm({
     if (formConfig) {
       updateFormData(formId, formData);
     }
-  }, [formData, formConfig]);
+  }, [formData, formConfig, formId, updateFormData]);
 
   const handleChange = (name, value) => {
     setFormData((prev) => ({
@@ -405,7 +405,7 @@ export default function DynamicForm({
                 <div className="flex flex-wrap items-center justify-center py-6 bg-gray-200 rounded-lg">
                   {imagePreview[uniqueStateName] &&
                     imagePreview[uniqueStateName].map((src, idx) => (
-                      <img
+                      <Image
                         key={idx}
                         src={src}
                         alt={`Preview ${idx + 1}`}
