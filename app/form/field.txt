@@ -1,641 +1,6 @@
+import Image from "next/image";
 import { useState, useEffect } from "react";
-
-export default function DynamicForm({ datas }) {
-  const [formConfig, setFormConfig] = useState(null);
-  const [formData, setFormData] = useState({});
-  const [imagePreview, setImagePreview] = useState({});
-
-  useEffect(() => {
-    const fetchFormConfig = async () => {
-      const data = datas;
-      setFormConfig(data);
-      console.log("datas", datas);
-    };
-    fetchFormConfig();
-  }, [datas]);
-
-  const handleChange = (name, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleFileChange = (name, files) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: files,
-    }));
-
-    const previewImages = [];
-    Array.from(files).forEach((file) => {
-      if (file && file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          previewImages.push(reader.result);
-          setImagePreview((prev) => ({
-            ...prev,
-            [name]: previewImages,
-          }));
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-  };
-
-  const handleRepeaterChange = (name, value, index) => {
-    setFormData((prev) => {
-      const updatedData = [...(prev[name] || [])];
-      updatedData[index] = { ...updatedData[index], ...value };
-      return {
-        ...prev,
-        [name]: updatedData,
-      };
-    });
-  };
-
-  const handleAddRepeater = (name) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: [...(prev[name] || []), { id: Date.now() }],
-    }));
-  };
-
-  // const handleRemoveRepeater = (name, index) => {
-  //   setFormData((prev) => {
-  //     const updatedData = [...(prev[name] || [])];
-  //     updatedData.splice(index, 1);
-  //     return {
-  //       ...prev,
-  //       [name]: updatedData,
-  //     };
-  //   });
-  // };
-
-  const handleRemoveRepeater = (name, index) => {
-    setFormData((prev) => {
-      const updatedData = [...(prev[name] || [])]; // Create a copy of the array
-      updatedData.splice(index, 1); // Remove the item at the specified index
-
-      // Remove the corresponding file entry
-      const updatedFormData = { ...prev, [name]: updatedData };
-      delete updatedFormData[`${name}_image_${index}`]; // Remove the file entry
-
-      return updatedFormData;
-    });
-
-    // Remove the corresponding image preview
-    setImagePreview((prev) => {
-      const updatedPreview = { ...prev };
-      delete updatedPreview[`${name}_image_${index}`]; // Remove the preview
-      return updatedPreview;
-    });
-  };
-
-  const renderFields = (fields, repeaterName) => {
-    return fields.map((field, index) => {
-      if (field.type === "repeater") {
-        return (
-          <div key={index} className="mb-6 border p-4 rounded-lg bg-gray-50">
-            <h4 className="text-lg font-semibold mb-4">{field.title}</h4>
-
-            {formData[repeaterName]?.map((nestedData, nestedIndex) => (
-              <div key={nestedData.id} className="mb-4">
-                <div className="flex justify-between items-center">
-                  <h5 className="text-md font-medium">
-                    {field.title} #{nestedIndex + 1}
-                  </h5>
-                  <button
-                    type="button"
-                    className="text-red-600"
-                    onClick={() =>
-                      handleRemoveRepeater(repeaterName, nestedIndex)
-                    }
-                  >
-                    Remove
-                  </button>
-                </div>
-                {field.nestedRepeaters.map((nested, nestedFieldIndex) => (
-                  <div key={nestedFieldIndex} className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {nested.title}:
-                    </label>
-                    {nested.type === "file" ? (
-                      <>
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-900 focus:border-blue-900"
-                          onChange={(e) =>
-                            handleFileChange(
-                              `${repeaterName}_image_${nestedIndex}`, // Use consistent naming
-                              e.target.files
-                            )
-                          }
-                        />
-                        {imagePreview[
-                          `${repeaterName}_${nested.stateName}_${nestedIndex}`
-                        ] &&
-                          imagePreview[
-                            `${repeaterName}_${nested.stateName}_${nestedIndex}`
-                          ].map((src, idx) => (
-                            <img
-                              key={idx}
-                              src={src}
-                              alt={`Preview ${idx + 1}`}
-                              className="mt-2 w-32 h-32 object-cover rounded-md"
-                            />
-                          ))}
-                      </>
-                    ) : (
-                      <input
-                        type="text"
-                        className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-900 focus:border-blue-900"
-                        value={nestedData[nested.stateName] || ""}
-                        onChange={(e) =>
-                          handleRepeaterChange(
-                            repeaterName,
-                            { [nested.stateName]: e.target.value },
-                            nestedIndex
-                          )
-                        }
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            ))}
-            <button
-              type="button"
-              className="bg-blue-900 text-white py-1 px-3 rounded-md mt-4"
-              onClick={() => handleAddRepeater(repeaterName)}
-            >
-              Add New {field.title}
-            </button>
-          </div>
-        );
-      } else if (field.type === "dropdown") {
-        return (
-          <div key={index} className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {field.title}:
-            </label>
-            <select
-              className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-900 focus:border-blue-900"
-              onChange={(e) => handleChange(field.stateName, e.target.value)}
-            >
-              <option value="">Select an option</option>
-              {field.options.map((option, idx) => (
-                <option key={idx} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-        );
-      } else {
-        return (
-          <div key={index} className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {field.title}:
-            </label>
-
-            {field.type === "textarea" ? (
-              <textarea
-                placeholder={field.placeholder || ""}
-                className="w-full border-gray-300 p-3 rounded-md border shadow-sm focus:ring-blue-900 focus:border-blue-900"
-                rows={4}
-                onChange={(e) => handleChange(field.stateName, e.target.value)}
-              ></textarea>
-            ) : (
-              <div>
-                <div className="flex-1 items-center mx-auto mb-3 space-y-4 sm:flex sm:space-y-0">
-                  <div className="relative w-full">
-                    {field.type === "file" ? (
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        className="w-full absolute opacity-0 rounded-md shadow-sm focus:ring-blue-900 focus:border-blue-900"
-                        onChange={(e) =>
-                          handleFileChange(field.stateName, e.target.files)
-                        }
-                        id="input"
-                      />
-                    ) : (
-                      <input
-                        type={field.type}
-                        className="w-full border-gray-300 rounded-md p-3 border shadow-sm focus:ring-blue-900 focus:border-blue-900"
-                        value={formData[field.stateName] || ""}
-                        onChange={(e) =>
-                          handleChange(field.stateName, e.target.value)
-                        }
-                      />
-                    )}
-
-                    {field.type === "file" && (
-                      <div className="items-center justify-center mx-auto">
-                        <label
-                          htmlFor="input"
-                          className="flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none"
-                        >
-                          <span className="flex items-center space-x-2">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-6 h-6 text-gray-600"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                              ></path>
-                            </svg>
-                            <span className="font-medium text-gray-600">
-                              Drop Image to Attach, or
-                              <span className="text-blue-600 underline ml-[4px]">
-                                browse
-                              </span>
-                            </span>
-                          </span>
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-wrap">
-                  {imagePreview[field.stateName] &&
-                    imagePreview[field.stateName].map((src, idx) => (
-                      <img
-                        key={idx}
-                        src={src}
-                        alt={`Preview ${idx + 1}`}
-                        className="mt-2 w-32 h-32 mx-2 object-cover rounded-md"
-                      />
-                    ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      }
-    });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Form data:", formData); // This will show the entire collected data
-
-    alert("Save successfully!");
-    // window.location.href = "http://localhost:3000/dashboard";
-  };
-
-  if (!formConfig) {
-    return <p className="text-center text-gray-500">Loading form...</p>;
-  }
-
-  return (
-    <div className="px-4">
-      {console.log("formConfig", formConfig)}
-      <div className="w-full mx-auto p-6 border my-6 rounded-lg">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">
-          {formConfig.blueprintName}
-        </h1>
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg py-6">
-          {formConfig.parentFields.map((parent, index) => (
-            <div key={index} className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                {parent.title}
-              </h2>
-              {renderFields(parent.nestedFields, parent.stateName)}
-            </div>
-          ))}
-          <button
-            type="submit"
-            className="bg-blue-900 mx-auto text-white py-2 px-4 rounded-md shadow hover:bg-blue-900 focus:ring-2 focus:ring-blue-900 focus:outline-none"
-          >
-            Save
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-
-
-
-import { useState, useEffect } from "react";
-
-export default function DynamicForm({ datas, formId, updateFormData }) {
-  const [formConfig, setFormConfig] = useState(null);
-  const [formData, setFormData] = useState({});
-  const [imagePreview, setImagePreview] = useState({});
-  console.log("datas", datas);
-  useEffect(() => {
-    const fetchFormConfig = async () => {
-      const data = datas;
-      setFormConfig(data);
-    };
-    fetchFormConfig();
-  }, [datas]);
-
-  // Update parent state whenever formData changes
-  useEffect(() => {
-    if (formConfig) {
-      updateFormData(formId, formData);
-    }
-  }, [formData, formConfig]);
-
-  const handleChange = (name, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleFileChange = (name, files) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: files,
-    }));
-
-    const previewImages = [];
-    Array.from(files).forEach((file) => {
-      if (file && file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          previewImages.push(reader.result);
-          setImagePreview((prev) => ({
-            ...prev,
-            [name]: previewImages,
-          }));
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-  };
-
-  const handleRepeaterChange = (name, value, index) => {
-    setFormData((prev) => {
-      const updatedData = [...(prev[name] || [])];
-      updatedData[index] = { ...updatedData[index], ...value };
-      return {
-        ...prev,
-        [name]: updatedData,
-      };
-    });
-  };
-
-  const handleAddRepeater = (name) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: [...(prev[name] || []), { id: Date.now() }],
-    }));
-  };
-
-  const handleRemoveRepeater = (name, index) => {
-    setFormData((prev) => {
-      const updatedData = [...(prev[name] || [])];
-      updatedData.splice(index, 1);
-      const updatedFormData = { ...prev, [name]: updatedData };
-      delete updatedFormData[`${name}_image_${index}`];
-      return updatedFormData;
-    });
-
-    setImagePreview((prev) => {
-      const updatedPreview = { ...prev };
-      delete updatedPreview[`${name}_image_${index}`];
-      return updatedPreview;
-    });
-  };
-
-  const renderFields = (fields, repeaterName) => {
-    return fields.map((field, index) => {
-      if (field.type === "repeater") {
-        return (
-          <div key={index} className="mb-6 border p-4 rounded-lg bg-gray-50">
-            <h4 className="text-lg font-semibold mb-4">{field.title}</h4>
-            {formData[repeaterName]?.map((nestedData, nestedIndex) => (
-              <div key={nestedData.id} className="mb-4">
-                <div className="flex justify-between items-center">
-                  <h5 className="text-md font-medium">
-                    {field.title} #{nestedIndex + 1}
-                  </h5>
-                  <button
-                    type="button"
-                    className="text-red-600"
-                    onClick={() =>
-                      handleRemoveRepeater(repeaterName, nestedIndex)
-                    }
-                  >
-                    Remove
-                  </button>
-                </div>
-                {field.nestedRepeaters.map((nested, nestedFieldIndex) => (
-                  <div key={nestedFieldIndex} className="mb-4 ">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {nested.title}:
-                    </label>
-                    {nested.type === "file" ? (
-                      <>
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          className="w-full border-gray-300 rounded-md  focus:ring-blue-900 focus:border-blue-900"
-                          onChange={(e) =>
-                            handleFileChange(
-                              `${repeaterName}_image_${nestedIndex}`,
-                              e.target.files
-                            )
-                          }
-                        />
-
-                        <div className="flex flex-wrap items-center justify-center gap-[12px] p-6 bg-gray-200 rounded-lg my-5">
-                          {imagePreview[
-                            `${repeaterName}_${nested.stateName}_${nestedIndex}`
-                          ] &&
-                            imagePreview[
-                              `${repeaterName}_${nested.stateName}_${nestedIndex}`
-                            ].map((src, idx) => (
-                              <img
-                                key={idx}
-                                src={src}
-                                alt={`Preview ${idx + 1}`}
-                                className="mt-2 w-32 h-32 object-cover rounded-md"
-                              />
-                            ))}
-                        </div>
-                      </>
-                    ) : (
-                      <input
-                        type="text"
-                        className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-900 focus:border-blue-900"
-                        value={nestedData[nested.stateName] || ""}
-                        onChange={(e) =>
-                          handleRepeaterChange(
-                            repeaterName,
-                            { [nested.stateName]: e.target.value },
-                            nestedIndex
-                          )
-                        }
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            ))}
-            <button
-              type="button"
-              className="bg-blue-900 text-white py-1 px-3 rounded-md mt-4"
-              onClick={() => handleAddRepeater(repeaterName)}
-            >
-              Add {field.title}
-            </button>
-          </div>
-        );
-      } else if (field.type === "dropdown") {
-        return (
-          <div key={index} className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {field.title}:
-            </label>
-            <select
-              className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-900 focus:border-blue-900"
-              onChange={(e) => handleChange(field.stateName, e.target.value)}
-            >
-              <option value="">Select an option</option>
-              {field.options.map((option, idx) => (
-                <option key={idx} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-        );
-      } else {
-        return (
-          <div key={index} className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {field.title}:
-            </label>
-            {field.type === "textarea" ? (
-              <textarea
-                placeholder={field.placeholder || ""}
-                className="w-full border-gray-300 p-3 rounded-md border shadow-sm focus:ring-blue-900 focus:border-blue-900"
-                rows={4}
-                onChange={(e) => handleChange(field.stateName, e.target.value)}
-              ></textarea>
-            ) : (
-              <div>
-                <div className="flex-1 items-center mx-auto mb-3 space-y-4 sm:flex sm:space-y-0">
-                  <div className="relative w-full">
-                    {field.type === "file" ? (
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        className="w-full absolute opacity-0 rounded-md shadow-sm focus:ring-blue-900 focus:border-blue-900"
-                        onChange={(e) =>
-                          handleFileChange(field.stateName, e.target.files)
-                        }
-                        id="input"
-                      />
-                    ) : (
-                      <input
-                        type={field.type}
-                        className="w-full border-gray-300 rounded-md p-3 border shadow-sm focus:ring-blue-900 focus:border-blue-900"
-                        value={formData[field.stateName] || ""}
-                        onChange={(e) =>
-                          handleChange(field.stateName, e.target.value)
-                        }
-                      />
-                    )}
-                    {field.type === "file" && (
-                      <div className="items-center justify-center mx-auto">
-                        <label
-                          htmlFor="input"
-                          className="flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none"
-                        >
-                          <span className="flex items-center space-x-2">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-6 h-6 text-gray-600"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                              ></path>
-                            </svg>
-                            <span className="font-medium text-gray-600">
-                              Drop Image to Attach, or
-                              <span className="text-blue-600 underline ml-[4px]">
-                                browse
-                              </span>
-                            </span>
-                          </span>
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-wrap">
-                  {imagePreview[field.stateName] &&
-                    imagePreview[field.stateName].map((src, idx) => (
-                      <img
-                        key={idx}
-                        src={src}
-                        alt={`Preview ${idx + 1}`}
-                        className="mt-2 w-32 h-32 mx-2 object-cover rounded-md"
-                      />
-                    ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      }
-    });
-  };
-
-  if (!formConfig) {
-    return <p className="text-center text-gray-500">Loading form...</p>;
-  }
-
-  return (
-    <div className="px-4">
-      <div className="w-full mx-auto p-6 border my-6 rounded-lg">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">
-          {formConfig.blueprintName}
-        </h1>
-        <form className="bg-white rounded-lg py-6">
-          {formConfig.parentFields.map((parent, index) => (
-            <div key={index} className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                {parent.title}
-              </h2>
-              {renderFields(parent.nestedFields, parent.stateName)}
-            </div>
-          ))}
-        </form>
-      </div>
-    </div>
-  );
-}
-
-
-
-import { useState, useEffect } from "react";
+import { TrashIcon, MovableIcon, DropImageIcon } from "@/public/icons/icons";
 
 export default function DynamicForm({
   datas,
@@ -646,345 +11,10 @@ export default function DynamicForm({
   const [formConfig, setFormConfig] = useState(null);
   const [formData, setFormData] = useState({});
   const [imagePreview, setImagePreview] = useState({});
-  const [updatedData, setUpdatedData] = useState(null);
+  const [collapse, setCollapse] = useState({});
 
   useEffect(() => {
     if (!datas || !datas.parentFields) return;
-
-    const processedData = {
-      ...datas,
-      parentFields: datas.parentFields.map((parent) => ({
-        ...parent,
-        nestedFields: parent.nestedFields
-          .filter((field) => field.title && field.stateName)
-          .map(({ stateName, ...rest }) => ({
-            ...rest,
-            title: `${rest.title}`,
-            [`stateName${indexData}`]: `${stateName}${indexData}`,
-          })),
-      })),
-    };
-
-    setUpdatedData(processedData);
-    console.log("new:", processedData);
-  }, [datas, indexData]);
-
-  useEffect(() => {
-    const fetchFormConfig = async () => {
-      const data = datas;
-      setFormConfig(data);
-    };
-    fetchFormConfig();
-  }, [datas]);
-
-  // Update parent state whenever formData changes
-  useEffect(() => {
-    if (formConfig) {
-      updateFormData(formId, formData);
-    }
-  }, [formData, formConfig]);
-
-  const handleChange = (name, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleFileChange = (name, files) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: files,
-    }));
-
-    const previewImages = [];
-    Array.from(files).forEach((file) => {
-      if (file && file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          previewImages.push(reader.result);
-          setImagePreview((prev) => ({
-            ...prev,
-            [name]: previewImages,
-          }));
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-  };
-
-  const handleRepeaterChange = (name, value, index) => {
-    setFormData((prev) => {
-      const updatedData = [...(prev[name] || [])];
-      updatedData[index] = { ...updatedData[index], ...value };
-      return {
-        ...prev,
-        [name]: updatedData,
-      };
-    });
-  };
-
-  const handleAddRepeater = (name) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: [...(prev[name] || []), { id: Date.now() }],
-    }));
-  };
-
-  const handleRemoveRepeater = (name, index) => {
-    setFormData((prev) => {
-      const updatedData = [...(prev[name] || [])];
-      updatedData.splice(index, 1);
-      const updatedFormData = { ...prev, [name]: updatedData };
-      delete updatedFormData[`${name}_image_${index}`];
-      return updatedFormData;
-    });
-
-    setImagePreview((prev) => {
-      const updatedPreview = { ...prev };
-      delete updatedPreview[`${name}_image_${index}`];
-      return updatedPreview;
-    });
-  };
-
-  const renderFields = (fields, repeaterName) => {
-    return fields.map((field, index) => {
-      if (field.type === "repeater") {
-        return (
-          <div key={index} className="mb-6 border p-4 rounded-lg bg-gray-50">
-            <h4 className="text-lg font-semibold mb-4">{field.title}</h4>
-            {formData[repeaterName]?.map((nestedData, nestedIndex) => (
-              <div key={nestedData.id} className="mb-4">
-                <div className="flex justify-between items-center">
-                  <h5 className="text-md font-medium">
-                    {field.title} #{nestedIndex + 1}
-                  </h5>
-                  <button
-                    type="button"
-                    className="text-red-600"
-                    onClick={() =>
-                      handleRemoveRepeater(repeaterName, nestedIndex)
-                    }
-                  >
-                    Remove
-                  </button>
-                </div>
-                {field.nestedRepeaters.map((nested, nestedFieldIndex) => (
-                  <div key={nestedFieldIndex} className="mb-4 ">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {nested.title}:
-                    </label>
-                    {nested.type === "file" ? (
-                      <>
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          className="w-full border-gray-300 rounded-md  focus:ring-blue-900 focus:border-blue-900"
-                          onChange={(e) =>
-                            handleFileChange(
-                              `${repeaterName}_image_${nestedIndex}`,
-                              e.target.files
-                            )
-                          }
-                        />
-
-                        <div className="flex flex-wrap items-center justify-center gap-[12px] p-6 bg-gray-200 rounded-lg my-5">
-                          {imagePreview[
-                            `${repeaterName}_${nested.stateName}_${nestedIndex}`
-                          ] &&
-                            imagePreview[
-                              `${repeaterName}_${nested.stateName}_${nestedIndex}`
-                            ].map((src, idx) => (
-                              <img
-                                key={idx}
-                                src={src}
-                                alt={`Preview ${idx + 1}`}
-                                className="mt-2 w-32 h-32 object-cover rounded-md"
-                              />
-                            ))}
-                        </div>
-                      </>
-                    ) : (
-                      <input
-                        type="text"
-                        className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-900 focus:border-blue-900"
-                        value={nestedData[nested.stateName] || ""}
-                        onChange={(e) =>
-                          handleRepeaterChange(
-                            repeaterName,
-                            { [nested.stateName]: e.target.value },
-                            nestedIndex
-                          )
-                        }
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            ))}
-            <div className="flex items-center justify-center">
-              <button
-                type="button"
-                className="bg-blue-900 text-white py-1 px-3 rounded-md mt-4"
-                onClick={() => handleAddRepeater(repeaterName)}
-              >
-                Add {field.title}
-              </button>
-            </div>
-          </div>
-        );
-      } else if (field.type === "dropdown") {
-        return (
-          <div key={index} className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {field.title}:
-            </label>
-            <select
-              className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-900 focus:border-blue-900"
-              onChange={(e) => handleChange(field.stateName, e.target.value)}
-            >
-              <option value="">Select an option</option>
-              {field.options.map((option, idx) => (
-                <option key={idx} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-        );
-      } else {
-        return (
-          <div key={index} className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {field.title}:
-            </label>
-            {field.type === "textarea" ? (
-              <textarea
-                placeholder={field.placeholder || ""}
-                className="w-full border-gray-300 p-3 rounded-md border shadow-sm focus:ring-blue-900 focus:border-blue-900"
-                rows={4}
-                onChange={(e) => handleChange(field.stateName, e.target.value)}
-              ></textarea>
-            ) : (
-              <div>
-                <div className="flex-1 items-center mx-auto mb-3 space-y-4 sm:flex sm:space-y-0">
-                  <div className="relative w-full">
-                    {field.type === "file" ? (
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        className="w-full absolute opacity-0 rounded-md shadow-sm focus:ring-blue-900 focus:border-blue-900"
-                        onChange={(e) =>
-                          handleFileChange(field.stateName, e.target.files)
-                        }
-                        id={`file-input-${uniqueStateName}`}
-                      />
-                    ) : (
-                      <input
-                        type={field.type}
-                        className="w-full border-gray-300 rounded-md p-3 border shadow-sm focus:ring-blue-900 focus:border-blue-900"
-                        value={formData[field.stateName] || ""}
-                        onChange={(e) =>
-                          handleChange(field.stateName, e.target.value)
-                        }
-                      />
-                    )}
-                    {field.type === "file" && (
-                      <div className="items-center justify-center mx-auto">
-                        <label
-                          htmlFor="input"
-                          className="flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none"
-                        >
-                          <span className="flex items-center space-x-2">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-6 h-6 text-gray-600"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                              ></path>
-                            </svg>
-                            <span className="font-medium text-gray-600">
-                              Drop Image to Attach, or
-                              <span className="text-blue-600 underline ml-[4px]">
-                                browse
-                              </span>
-                            </span>
-                          </span>
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-wrap">
-                  {imagePreview[field.stateName] &&
-                    imagePreview[field.stateName].map((src, idx) => (
-                      <img
-                        key={idx}
-                        src={src}
-                        alt={`Preview ${idx + 1}`}
-                        className="mt-2 w-32 h-32 mx-2 object-cover rounded-md"
-                      />
-                    ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      }
-    });
-  };
-
-  if (!formConfig) {
-    return <p className="text-center text-gray-500">Loading form...</p>;
-  }
-
-  return (
-    <div className="px-4">
-      <div className="w-full mx-auto p-6 border my-6 rounded-lg">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">
-          {formConfig.blueprintName}
-        </h1>
-        <form className="bg-white rounded-lg py-6">
-          {formConfig.parentFields.map((parent, index) => (
-            <div key={index} className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                {parent.title}
-              </h2>
-              {renderFields(parent.nestedFields, parent.stateName)}
-            </div>
-          ))}
-        </form>
-      </div>
-    </div>
-  );
-}
-
-
-
-import { useState, useEffect } from "react";
-
-export default function DynamicForm({
-  datas,
-  formId,
-  updateFormData,
-  indexData,
-}) {
-  const [formConfig, setFormConfig] = useState(null);
-  const [formData, setFormData] = useState({});
-  const [imagePreview, setImagePreview] = useState({});
-
-  useEffect(() => {
-    if (!datas || !datas.parentFields) return;
-
     setFormConfig(datas);
   }, [datas, indexData]);
 
@@ -1001,26 +31,51 @@ export default function DynamicForm({
     }));
   };
 
-  const handleFileChange = (name, files) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: files,
-    }));
+  const handleFileChange = (name, files, repeaterName, index) => {
+    const imageKey = `${repeaterName}_image_${index}`;
 
-    const previewImages = [];
-    Array.from(files).forEach((file) => {
-      if (file && file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          previewImages.push(reader.result);
-          setImagePreview((prev) => ({
-            ...prev,
-            [name]: previewImages,
-          }));
-        };
-        reader.readAsDataURL(file);
-      }
-    });
+    if (!repeaterName) {
+      alert(imageKey);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: files,
+      }));
+
+      const previewImages = [];
+      Array.from(files).forEach((file) => {
+        if (file && file.type.startsWith("image/")) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            previewImages.push(reader.result);
+            setImagePreview((prev) => ({
+              ...prev,
+              [name]: previewImages,
+            }));
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [imageKey]: files,
+      }));
+
+      const previewImages = [];
+      Array.from(files).forEach((file) => {
+        if (file && file.type.startsWith("image/")) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            previewImages.push(reader.result);
+            setImagePreview((prev) => ({
+              ...prev,
+              [imageKey]: previewImages,
+            }));
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
   };
 
   const handleRepeaterChange = (name, value, index) => {
@@ -1035,26 +90,65 @@ export default function DynamicForm({
   };
 
   const handleAddRepeater = (name) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: [...(prev[name] || []), { id: Date.now() }],
-    }));
+    console.log("name", name);
+    setFormData((prev) => {
+      const newData = [...(prev[name] || []), { id: Date.now() }];
+      console.log(`Added repeater field to ${name}`);
+      console.log(
+        "FormData after adding:",
+        JSON.stringify({ ...prev, [name]: newData }, null, 2)
+      );
+      return {
+        ...prev,
+        [name]: newData,
+      };
+    });
   };
 
   const handleRemoveRepeater = (name, index) => {
+    console.log(`Removing repeater field from ${name} at index ${index}`);
+    console.log("FormData before removal:", JSON.stringify(formData, null, 2));
     setFormData((prev) => {
       const updatedData = [...(prev[name] || [])];
       updatedData.splice(index, 1);
-      const updatedFormData = { ...prev, [name]: updatedData };
-      delete updatedFormData[`${name}_image_${index}`];
-      return updatedFormData;
-    });
+      console.log(`Updated data for ${name}:`, updatedData);
+      console.log(
+        "FormData after removal:",
+        JSON.stringify({ ...prev, [name]: updatedData }, null, 2)
+      );
 
-    setImagePreview((prev) => {
-      const updatedPreview = { ...prev };
-      delete updatedPreview[`${name}_image_f${index}`];
-      return updatedPreview;
+      // Update image keys
+      const updatedImagePreview = { ...imagePreview };
+      const updatedFormData = { ...prev };
+      Object.keys(imagePreview).forEach((key) => {
+        if (key.startsWith(`${name}_image_`)) {
+          const keyIndex = parseInt(key.split("_").pop(), 10);
+          if (keyIndex === index) {
+            delete updatedImagePreview[key];
+            delete updatedFormData[key];
+          } else if (keyIndex > index) {
+            const newKey = `${name}_image_${keyIndex - 1}`;
+            updatedImagePreview[newKey] = updatedImagePreview[key];
+            updatedFormData[newKey] = updatedFormData[key];
+            delete updatedImagePreview[key];
+            delete updatedFormData[key];
+          }
+        }
+      });
+      setImagePreview(updatedImagePreview);
+
+      return {
+        ...updatedFormData,
+        [name]: updatedData,
+      };
     });
+  };
+
+  const handleCollapse = (repeaterName, index) => {
+    setCollapse((prev) => ({
+      ...prev,
+      [`${repeaterName}_${index}`]: !prev[`${repeaterName}_${index}`],
+    }));
   };
 
   const renderFields = (fields, repeaterName) => {
@@ -1064,36 +158,50 @@ export default function DynamicForm({
       if (field.type === "repeater") {
         return (
           <div key={index} className="mb-6 border p-4 rounded-lg bg-gray-50">
-            <h4 className="text-sm font-semibold mb-4">Fields</h4>
+            <h4 className="text-xs font-semibold mb-4">Fields</h4>
             {formData[uniqueStateName]?.map((nestedData, nestedIndex) => (
-              <div key={nestedData.id} className="mb-4 border p-4 rounded-lg">
-                <div className="flex justify-between items-center ">
-                  <div className="flex items-center justify-end w-full">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="size-6 text-red-600"
+              <div
+                key={nestedData.id}
+                className="mb-4 border p-4 rounded-lg bg-white"
+                id={`remove-${nestedIndex}`}
+              >
+                <div className="flex justify-between items-center mb-2 pb-3 border-b">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex gap-[12px] items-center">
+                      <small className="border w-[32px] h-[32px] rounded-lg flex items-center justify-center ">
+                        <MovableIcon />
+                      </small>
+                      <small
+                        className="cursor-pointer"
+                        onClick={() =>
+                          handleCollapse(uniqueStateName, nestedIndex)
+                        }
+                      >
+                        {collapse[`${uniqueStateName}_${nestedIndex}`]
+                          ? "Expand"
+                          : "Collapse"}
+                      </small>
+                    </div>
+                    <TrashIcon
                       onClick={() =>
                         handleRemoveRepeater(uniqueStateName, nestedIndex)
                       }
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                      />
-                    </svg>
-                    {console.log("nestedData", field)}
+                    />
                   </div>
                 </div>
                 {field.nestedRepeaters.map((nested, nestedFieldIndex) => {
                   const nestedUniqueStateName = `${nested.stateName}_${indexData}`;
+                  const isCollapsed =
+                    collapse[`${uniqueStateName}_${nestedIndex}`];
+
                   return (
-                    <div key={nestedFieldIndex} className="mb-4 ">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div
+                      key={nestedFieldIndex}
+                      className={`mb-4 border rounded-lg p-4 bg-gray-50  ${
+                        isCollapsed ? "hidden" : ""
+                      }`}
+                    >
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
                         {nested.title}:
                       </label>
                       {nested.type === "file" ? (
@@ -1105,60 +213,52 @@ export default function DynamicForm({
                             className="w-[0px] opacity-0"
                             onChange={(e) =>
                               handleFileChange(
-                                `${nestedUniqueStateName}_image_${nestedIndex}`,
-                                e.target.files
+                                nested.stateName,
+                                e.target.files,
+                                uniqueStateName,
+                                nestedIndex
                               )
                             }
                             id={`file-repeater-${indexData}-${nestedFieldIndex}-${nestedIndex}`}
                           />
-                          {nested.type === "file" ? (
-                            <>
-                              <div className="items-center justify-center mx-auto">
-                                <label
-                                  htmlFor={`file-repeater-${indexData}-${nestedFieldIndex}-${nestedIndex}`}
-                                  className="flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none"
-                                >
-                                  <span className="flex items-center space-x-2">
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      className="w-6 h-6 text-gray-600"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                                      ></path>
-                                    </svg>
-                                    <span className="font-medium text-gray-600">
-                                      Drop Image to Attach, or
-                                      <span className="text-blue-600 underline ml-[4px]">
-                                        browse
-                                      </span>
-                                    </span>
+                          <div className="items-center justify-center mx-auto">
+                            <label
+                              htmlFor={`file-repeater-${indexData}-${nestedFieldIndex}-${nestedIndex}`}
+                              className="flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none z-10"
+                            >
+                              <span className="flex items-center space-x-2">
+                                <DropImageIcon />
+                                <span className="font-medium text-gray-600">
+                                  Drop Image to Attach, or
+                                  <span className="text-blue-600 underline ml-[4px]">
+                                    browse
                                   </span>
-                                </label>
-                              </div>
-                            </>
-                          ) : null}
-                          <div className="flex flex-wrap items-center justify-center gap-[12px] p-6 bg-gray-200 rounded-lg my-5">
-                            {imagePreview[
-                              `${nestedUniqueStateName}_${nested.stateName}_${nestedIndex}`
-                            ] &&
-                              imagePreview[
-                                `${nestedUniqueStateName}_${nested.stateName}_${nestedIndex}`
-                              ].map((src, idx) => (
-                                <img
-                                  key={idx}
-                                  src={src}
-                                  alt={`Preview ${idx + 1}`}
-                                  className="mt-2 w-32 h-32 object-cover rounded-md"
-                                />
-                              ))}
+                                </span>
+                              </span>
+                            </label>
                           </div>
+                          {imagePreview[
+                            `${uniqueStateName}_image_${nestedIndex}`
+                          ] &&
+                            imagePreview[
+                              `${uniqueStateName}_image_${nestedIndex}`
+                            ].length > 0 && (
+                              <div className="flex flex-wrap items-center justify-center gap-[12px] p-6 bg-gray-200 rounded-lg my-5">
+                                {imagePreview[
+                                  `${uniqueStateName}_image_${nestedIndex}`
+                                ].map((src, idx) => (
+                                  <Image
+                                    key={idx}
+                                    src={src}
+                                    width={300}
+                                    height={300}
+                                    alt={`Preview ${idx + 1}`}
+                                    className="mt-2 w-[300px] h-[300px] object-cover rounded-md"
+                                    property="true"
+                                  />
+                                ))}
+                              </div>
+                            )}
                         </>
                       ) : nested.type === "select" ? (
                         <select
@@ -1181,7 +281,7 @@ export default function DynamicForm({
                         </select>
                       ) : nested.type === "textarea" ? (
                         <textarea
-                          className="w-full border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-900 focus:border-blue-900"
+                          className="w-full border-gray-300 rounded-md border shadow-sm p-3 focus:ring-blue-900 focus:border-blue-900"
                           value={nestedData[nested.stateName] || ""}
                           onChange={(e) =>
                             handleRepeaterChange(
@@ -1205,11 +305,9 @@ export default function DynamicForm({
                           }
                         />
                       ) : (
-                        // This default branch covers input types like "text", "email", "password",
-                        // "number", "date", "time", "url", "tel", "color", "hidden", "range", "search", etc.
                         <input
                           type={nested.type}
-                          className="w-full border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-900 focus:border-blue-900"
+                          className="w-full border-gray-300 rounded-md border shadow-sm p-3 focus:ring-blue-900 focus:border-blue-900"
                           value={nestedData[nested.stateName] || ""}
                           onChange={(e) =>
                             handleRepeaterChange(
@@ -1228,7 +326,7 @@ export default function DynamicForm({
             <div className="flex items-center justify-center">
               <button
                 type="button"
-                className="hover:bg-gray-900 border border-gray-900 text-gray-900 hover:text-white  p-3 rounded-md mt-4 text-sm"
+                className="hover:bg-gray-900 border border-gray-900 text-gray-900 hover:text-white  p-3 rounded-md mt-4 text-xs"
                 onClick={() => handleAddRepeater(uniqueStateName)}
               >
                 Add to {field.title}
@@ -1257,8 +355,8 @@ export default function DynamicForm({
         );
       } else {
         return (
-          <div key={index} className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div key={index} className="mb-4 border p-4 rounded-lg bg-gray-50">
+            <label className="block text-xs font-bold text-gray-700 mb-1">
               {field.title}:
             </label>
             {field.type === "textarea" ? (
@@ -1271,14 +369,14 @@ export default function DynamicForm({
               ></textarea>
             ) : (
               <div>
-                <div className="flex-1 items-center mx-auto mb-3 space-y-4 sm:flex sm:space-y-0">
+                <div className="flex-1 items-center mx-auto mb-3 space-y-4 sm:flex sm:space-y-0 ">
                   <div className="relative w-full">
                     {field.type === "file" ? (
                       <input
                         type="file"
                         multiple
                         accept="image/*"
-                        className="w-[0px] opacity-0"
+                        className="w-[0px] h-[0px] opacity-0"
                         onChange={(e) =>
                           handleFileChange(uniqueStateName, e.target.files)
                         }
@@ -1298,23 +396,10 @@ export default function DynamicForm({
                       <div className="items-center justify-center mx-auto">
                         <label
                           htmlFor={`file-input-${uniqueStateName}`}
-                          className="flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none"
+                          className="flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none z-10"
                         >
                           <span className="flex items-center space-x-2">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-6 h-6 text-gray-600"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                              ></path>
-                            </svg>
+                            <DropImageIcon />
                             <span className="font-medium text-gray-600">
                               Drop Image to Attach, or
                               <span className="text-blue-600 underline ml-[4px]">
@@ -1327,17 +412,21 @@ export default function DynamicForm({
                     )}
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center justify-center">
-                  {imagePreview[uniqueStateName] &&
-                    imagePreview[uniqueStateName].map((src, idx) => (
-                      <img
-                        key={idx}
-                        src={src}
-                        alt={`Preview ${idx + 1}`}
-                        className="mt-2 w-32 h-32 mx-2 object-cover rounded-md"
-                      />
-                    ))}
-                </div>
+                {imagePreview[uniqueStateName] &&
+                  imagePreview[uniqueStateName].length > 0 && (
+                    <div className="flex flex-wrap items-center justify-center py-6 bg-gray-200 rounded-lg">
+                      {imagePreview[uniqueStateName].map((src, idx) => (
+                        <Image
+                          key={idx}
+                          src={src}
+                          width={300}
+                          height={300}
+                          alt={`Preview ${idx + 1}`}
+                          className="mt-2 w-32 h-32 mx-2 object-cover rounded-md"
+                        />
+                      ))}
+                    </div>
+                  )}
               </div>
             )}
           </div>
@@ -1352,14 +441,14 @@ export default function DynamicForm({
 
   return (
     <div className="px-4">
-      <div className="w-full mx-auto p-6 border my-6 rounded-lg">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">
+      <div className="w-full mx-auto  border my-6 rounded-lg shadow-md">
+        <h1 className="text-sm bg-gray-50 font-bold py-3 px-6 text-gray-800 border-b">
           {formConfig.blueprintName}
         </h1>
-        <form className="bg-white rounded-lg py-6">
+        <form className="bg-white rounded-lg py-6 px-6">
           {formConfig.parentFields.map((parent, index) => (
-            <div key={index} className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-700 mb-4">
+            <div key={index} className="text-sm">
+              <h2 className="text-sm font-semibold text-gray-700 mb-4">
                 {parent.title}
               </h2>
               {renderFields(parent.nestedFields, parent.stateName)}
@@ -1370,28 +459,3 @@ export default function DynamicForm({
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

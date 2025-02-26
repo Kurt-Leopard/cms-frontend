@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "../../axios";
 import { token } from "../helper/utils";
 
-const siteForm = ({ setShow }) => {
+const SiteForm = ({ setShow }) => {
   const [sitename, setSiteName] = useState("");
   const [frontendDomain, setFrontendDomain] = useState("");
   const [deployHook, setDeployHook] = useState("");
@@ -104,4 +104,4 @@ const siteForm = ({ setShow }) => {
   );
 };
 
-export default siteForm;
+export default SiteForm;

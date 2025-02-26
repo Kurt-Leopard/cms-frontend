@@ -819,3 +819,21 @@ export default function DynamicForm({ datas }) {
     </div>
   );
 }
+
+
+
+
+    // setFormData((prev) => {
+    //   const updatedData = [...(prev[name] || [])];
+    //   updatedData.splice(index, 1);
+    //   const updatedFormData = { ...prev, [name]: updatedData };
+    //   delete updatedFormData[`${name}_image_${index}`];
+    //   console.log(updatedData);
+    //   return updatedFormData;
+    // });
+
+    // setImagePreview((prev) => {
+    //   const updatedPreview = { ...prev };
+    //   delete updatedPreview[`${name}_image_f${index}`];
+    //   return updatedPreview;
+    // });
